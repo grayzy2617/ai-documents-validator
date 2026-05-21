@@ -1,0 +1,66 @@
+﻿DỰ ÁN: ỨNG DỤNG RAG KIỂM TRA VĂN BẢN
+Triển khai: Tại một trường THPT 
+TÓM TẮT:
+Các role chính có trong hệ thống
+Hệ thống sẽ có 3 ROLE chính:
+Người dùng (Giáo viên/ Văn thư)
+Quản trị viên (Admin - cán bộ Tin học)
+Kiểm duyệt viên (Ban Giám Hiệu/ Tổ chuyên môn)
+Mối quan hệ giữa các role
+Người dùng sử dụng hệ thống để kiểm tra văn bản
+Kiểm duyệt viên kiểm tra lại kết quả ()
+Quản trị viên quản lý toàn bộ hệ thống
+Người dùng → Tạo và xử lý văn bản
+↓
+Hệ thống AI (RAG) → Phân tích và phát hiện lỗi
+↓
+Kiểm duyệt viên → Xác nhận kết quả
+↓
+Quản trị viên → Quản lý và giám sát hệ thống
+Chức năng chính của từng role
+1. Người dùng (Giáo viên / Văn thư)
+Các chức năng chính:
+Xác thực tài khoản
+Đăng nhập / đăng xuất hệ thống
+Quản lý văn bản
+Tải lên văn bản (Docx/PDF)
+Xem lịch sử các file đã kiểm tra
+Kiểm tra văn bản bằng AI (RAG)
+Gửi yêu cầu kiểm tra
+Nhận kết quả phân tích lỗi
+Xem và tra cứu lỗi
+Xem danh sách lỗi thể thức
+Xem vị trí lỗi trong văn bản
+Tra cứu quy định liên quan
+Chỉnh sửa văn bản
+Chuẩn hóa tự động (Auto Fix)
+Chỉnh sửa thủ công (Manual Fix)
+Xuất kết quả
+Xuất file đã chuẩn hóa
+Xuất báo cáo lỗi (PDF/Word)
+2. Quản trị viên (Admin – cán bộ CNTT)
+Các chức năng chính:
+Quản lý người dùng
+Tạo / sửa / xóa tài khoản
+Phân quyền (User / Reviewer)
+Quản lý hệ thống
+Cấu hình hệ thống
+Theo dõi trạng thái hoạt động
+Quản lý dữ liệu
+Quản lý lịch sử kiểm tra
+Quản lý kho tri thức (Vector Database)
+Thống kê và báo cáo
+Xem thống kê số lượng văn bản
+Phân tích lỗi phổ biến
+Theo dõi hiệu suất hệ thống
+3. Kiểm duyệt viên (Reviewer – Ban giám hiệu / Tổ chuyên môn)
+Các chức năng chính:
+Kiểm tra kết quả AI
+Xem kết quả phân tích lỗi
+Đối chiếu với quy định thực tế
+Xác nhận và điều chỉnh
+Xác nhận lỗi đúng / sai
+Chỉnh sửa hoặc bổ sung lỗi
+Phê duyệt văn bản
+Xác nhận văn bản đạt chuẩn
+Cho phép ban hành văn bản 

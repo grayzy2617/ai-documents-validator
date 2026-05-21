@@ -1,0 +1,680 @@
+﻿III. Thiết Kế Cơ Sở Dữ Liệu
+1. Mô hình cơ sở dữ liệu
+1.1 Định nghĩa các bảng 
+STT
+Tên bảng
+Mục đích của bảng
+1
+users
+Lưu trữ thông tin tài khoản của tất cả người dùng (Giáo viên, Văn thư, Admin, Ban giám hiệu).
+2
+roles
+Định nghĩa các vai trò trong hệ thống (Người dùng, Kiểm duyệt viên, Quản trị viên) phục vụ phân quyền.
+3
+user_roles
+Bảng trung gian (n-n) liên kết tài khoản với các vai trò tương ứng để kiểm soát quyền truy cập linh hoạt.
+4
+knowledge_documents
+Lưu siêu dữ liệu (Metadata) của các thông tư, quy định, thể thức do Admin tải lên làm nguồn tri thức (Vector DB) cho AI.
+5
+user_documents
+Quản lý các văn bản (Docx/PDF) do Người dùng tải lên để yêu cầu kiểm tra, lưu trữ trạng thái (chờ xử lý, đã kiểm tra, đã duyệt).
+6
+check_history
+Lưu lại lịch sử của mỗi lần chạy kiểm tra RAG cho một văn bản, ghi nhận thời gian và file kết quả (bản Auto Fix / Manual Fix).
+7
+detected_errors
+Lưu chi tiết từng lỗi thể thức mà AI phát hiện (vị trí, loại lỗi, mô tả). Rất quan trọng để Admin "Phân tích lỗi phổ biến" và xuất báo cáo.
+8
+document_reviews
+Lưu vết quá trình Kiểm duyệt viên thao tác: xác nhận lỗi đúng/sai, bình luận điều chỉnh và quyết định phê duyệt cuối cùng.
+9
+system_configs
+Lưu trữ các cấu hình hoạt động của hệ thống (tham số RAG, giới hạn dung lượng file, v.v.) dành cho Admin quản lý.
+10
+audit_logs
+Nhật ký hệ thống ghi lại mọi hành động (tải file, sửa lỗi, đăng nhập) giúp Admin giám sát hoạt động và truy vết bảo mật.
+Bảng 7:Các bảng có trong dự án
+Các bảng trong cơ sở dữ liệu 
+1.2 Mô tả chi tiết các bảng dữ liệu 
+1. Bảng user
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh người dùng
+Khóa chính, tự động tăng
+2
+username
+VARCHAR(50)
+UNIQUE, NOT NULL
+Tên đăng nhập
+Định danh duy nhất để đăng nhập
+3
+password
+VARCHAR(255)
+NOT NULL
+Mật khẩu tài khoản
+Bắt buộc phải mã hóa băm (VD: bcrypt)
+4
+full_name
+VARCHAR(100)
+NOT NULL
+Họ và tên người dùng
+Hiển thị trên giao diện hệ thống
+5
+email
+VARCHAR(100)
+UNIQUE, NOT NULL
+Địa chỉ Email
+Dùng để liên lạc hoặc khôi phục mật khẩu
+6
+status
+TINYINT(1)
+DEFAULT 1
+Trạng thái tài khoản
+1: Đang hoạt động; 0: Bị khóa
+7
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Ngày tạo tài khoản
+Hệ thống tự động ghi nhận thời gian
+8
+reset_token
+VARCHAR(255)
+NULL
+Mã khôi phục mật khẩu
+Token gửi qua email
+9
+token_expiry
+TIMESTAMP
+NULL
+Hạn sử dụng mã khôi phục
+Bảng 8:Bảng User
+2. Bảng roles (Vai trò)
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh vai trò
+Khóa chính, tự động tăng
+2
+role_name
+VARCHAR(50)
+UNIQUE, NOT NULL
+Tên vai trò
+VD: ADMIN, USER, REVIEWER
+3
+description
+VARCHAR(255)
+NULL
+Mô tả chi tiết vai trò
+Diễn giải phạm vi quyền hạn của vai trò này
+Bảng 9:Bảng Roles
+3. Bảng user_roles (Phân quyền người dùng)
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+user_id
+INT
+PK, FK, NOT NULL
+Mã người dùng
+Khóa ngoại tham chiếu đến cột id của bảng users
+2
+role_id
+INT
+PK, FK, NOT NULL
+Mã vai trò
+Khóa ngoại tham chiếu đến cột id của bảng roles
+ Bảng 10: Bảng user_roles
+4. Bảng knowledge_documents (Kho tri thức hệ thống) 
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh tài liệu tri thức
+Khóa chính, ID này map với Metadata trong Vector DB
+2
+title
+VARCHAR(255)
+NOT NULL
+Tên / Tiêu đề quy định
+VD: Nghị định 30/2020/NĐ-CP về công tác văn thư
+3
+file_path
+VARCHAR(255)
+NOT NULL
+Đường dẫn file gốc
+Nơi lưu trữ vật lý trên server (MinIO hoặc thư mục tĩnh)
+4
+uploaded_by
+INT
+FK, NOT NULL
+Người tải lên
+Khóa ngoại tham chiếu id của bảng users (thường là Admin)
+5
+is_active
+TINYINT(1)
+DEFAULT 1
+Trạng thái hiệu lực
+1: Đang làm quy chuẩn; 0: Đã hết hiệu lực/Bị thay thế
+6
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Thời gian nạp dữ liệu
+7
+document_type
+VARCHAR(50)
+NOT NULL
+Loại tài liệu
+Nghị định, Thông tư, Nội quy...
+        Bảng 11: Bảng knowledge_documents
+5. Bảng user_documents (Văn bản cần kiểm tra) 
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh văn bản
+Khóa chính
+2
+user_id
+INT
+FK, NOT NULL
+Chủ sở hữu văn bản
+Khóa ngoại tham chiếu id của bảng users
+3
+original_file_name
+VARCHAR(255)
+NOT NULL
+Tên tệp tin gốc
+VD: Thong_bao_hop_PHHS_khoi_12.docx
+4
+file_path
+VARCHAR(255)
+NOT NULL
+Đường dẫn file gốc
+Nơi lưu file chưa chỉnh sửa
+5
+status
+VARCHAR(50)
+DEFAULT 'PENDING'
+Trạng thái hiện tại
+VD: PENDING (Chờ xử lý), CHECKED (Đã kiểm tra), APPROVED (Đã duyệt)
+6
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Thời gian tải lên
+7
+metadata
+JSON
+NULL
+Siêu dữ liệu bóc tách
+Tác giả, số trang, ngày tạo file gốc
+Bảng 12:Bảng user_documents
+6. Bảng check_history (Lịch sử kiểm tra) 
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh lượt kiểm tra
+Khóa chính
+2
+document_id
+INT
+FK, NOT NULL
+Thuộc văn bản nào
+Khóa ngoại tham chiếu id của bảng user_documents
+3
+fixed_file_path
+VARCHAR(255)
+NULL
+Đường dẫn file đã sửa
+Nơi lưu file sau khi người dùng bấm Auto Fix / Manual Fix
+4
+check_date
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Thời điểm kiểm tra
+Bảng 13:Bảng check_history
+7. Bảng detected_errors (Chi tiết lỗi AI phát hiện) 
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh lỗi
+Khóa chính
+2
+history_id
+INT
+FK, NOT NULL
+Thuộc lượt kiểm tra nào
+Khóa ngoại tham chiếu id của bảng check_history
+3
+error_type
+VARCHAR(100)
+NOT NULL
+Phân loại lỗi
+VD: Sai font chữ, Sai lề, Thiếu quốc hiệu
+4
+error_location
+VARCHAR(255)
+NULL
+Vị trí phát hiện lỗi
+VD: Trang 1, dòng số 3
+5
+description
+TEXT
+NOT NULL
+Mô tả chi tiết lỗi
+Phản hồi thô trả về từ LLM API
+6
+suggestion
+TEXT
+NULL
+Gợi ý sửa đổi
+Context lấy từ Vector DB để hướng dẫn người dùng sửa
+7
+status
+VARCHAR(50)
+DEFAULT 'UNFIXED'
+Trạng thái của lỗi này
+VD: UNFIXED (Chưa sửa), AUTO_FIXED (AI đã sửa), IGNORED (Bỏ qua)
+8
+reviewer_comment
+TEXT
+NULL
+Ghi chú của kiểm duyệt viên
+Dùng khi kiểm duyệt viên đánh dấu lỗi AI bắt sai
+Bảng 14:Bảng detected_errors
+8. Bảng document_reviews (Kiểm duyệt văn bản)
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh lượt duyệt
+Khóa chính
+2
+document_id
+INT
+FK, NOT NULL
+Thuộc văn bản nào
+Khóa ngoại tham chiếu id của bảng user_documents
+3
+reviewer_id
+INT
+FK, NOT NULL
+Người kiểm duyệt
+Khóa ngoại tham chiếu id của bảng users
+4
+review_status
+VARCHAR(50)
+NOT NULL
+Kết quả duyệt
+VD: APPROVED (Đã duyệt), REJECTED (Từ chối), NEEDS_REVISION (Yêu cầu sửa)
+5
+comments
+TEXT
+NULL
+Lời phê / Góp ý
+Nhận xét chi tiết của người duyệt cho văn bản
+6
+reviewed_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Thời gian duyệt
+Bảng 15:Bảng document_reviews
+9. Bảng system_configs (Cấu hình hệ thống) 
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+INT
+PK, AI
+Mã định danh cấu hình
+Khóa chính
+2
+config_key
+VARCHAR(100)
+UNIQUE, NOT NULL
+Tên biến cấu hình
+VD: MAX_FILE_SIZE, RAG_THRESHOLD, LLM_MODEL
+3
+config_value
+VARCHAR(255)
+NOT NULL
+Giá trị cấu hình
+VD: "10MB", "0.8", "gemini-1.5-pro"
+4
+description
+VARCHAR(255)
+NULL
+Mô tả ý nghĩa
+Giải thích cho Admin hiểu biến này dùng để làm gì
+5
+updated_by
+INT
+FK
+Người cập nhật cuối
+Khóa ngoại tham chiếu bảng users
+6
+updated_at
+TIMESTAMP
+ON UPDATE CURRENT_TIMESTAMP
+Thời gian cập nhật
+Tự động cập nhật giờ hệ thống khi có thay đổi
+Bảng 16:Bảng system_configs
+10. Bảng audit_logs (Nhật ký hệ thống)
+STT
+Tên trường
+Kiểu dữ liệu
+Ràng buộc
+Ý nghĩa
+Ghi chú
+1
+id
+BIGINT
+PK, AI
+Mã bản ghi log
+Dùng BIGINT vì số lượng log sinh ra hàng ngày rất lớn
+2
+user_id
+INT
+FK, NOT NULL
+Người thực hiện
+Khóa ngoại tham chiếu bảng users
+3
+action
+VARCHAR(100)
+NOT NULL
+Hành động thực hiện
+VD: LOGIN, UPLOAD_DOC, DELETE_USER, UPDATE_CONFIG
+4
+target_table
+VARCHAR(50)
+NULL
+Bảng bị tác động
+VD: user_documents, system_configs
+5
+target_id
+INT
+NULL
+ID dữ liệu bị tác động
+ID của văn bản hoặc ID của cấu hình vừa bị sửa
+6
+ip_address
+VARCHAR(45)
+NULL
+Địa chỉ IP
+Lưu vết IP truy cập (hỗ trợ IPv4 và IPv6)
+7
+created_at
+TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+Thời điểm ghi log
+ Bảng 17:Bảng audit_logs
+III. Phân Tích Các Yêu Cầu Của Phần Mềm
+1. Yêu cầu chức năng của phần mềm
+1.1. Nhóm chức năng Quản trị hệ thống & Tài khoản
+STT
+Chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+1
+Đăng nhập hệ thống (Hỗ trợ tài khoản nội bộ / SSO)
+Yêu cầu xử lý
+Dành cho tất cả các Role. Yêu cầu mã hóa mật khẩu khi truyền tải.
+2
+Đăng xuất hệ thống
+Dành cho tất cả các Role. Hủy Token/Session phiên làm việc.
+3
+Khôi phục mật khẩu qua email
+Dành cho tất cả các Role khi quên mật khẩu đăng nhập.
+4
+Phân quyền người dùng
+Chỉ Admin. Gán User vào các nhóm quyền tương ứng.
+5
+Khôi phục cơ sở dữ liệu từ bản sao lưu (Restore)
+Chỉ Admin. Khôi phục hệ thống khi có sự cố mất mát dữ liệu.
+6
+Sao lưu cơ sở dữ liệu hệ thống định kỳ (Backup)
+Chỉ Admin. Backup dữ liệu lịch sử kiểm tra và thông tin người dùng.
+7
+Cập nhật thông tin tài khoản
+Dữ liệu đầu vào
+Dành cho tất cả các Role (Đổi mật khẩu, cập nhật họ tên, email).
+8
+Quản lý người dùng (CRUD)
+Chỉ Quản trị viên (Admin). Cấp tài khoản cho Giáo viên/Văn thư.
+9
+Quản lý nhóm người dùng (Roles)
+Chỉ Admin. Thiết lập các nhóm: Người dùng, Kiểm duyệt viên, Quản trị viên.
+10
+Quản lý cấu hình hệ thống
+Chỉ Admin. Tùy chỉnh tham số kết nối Vector DB, LLM, giới hạn file tải lên.
+11
+Quản lý danh mục API Key (OpenAI, Gemini, Local LLM)
+Chỉ Admin. Đảm bảo bảo mật khóa kết nối với các dịch vụ AI bên ngoài.
+12
+Xem danh sách Log API và giám sát hệ thống
+Yêu cầu truy vấn
+Chỉ Admin. Kiểm soát lưu lượng giao tiếp với các dịch vụ AI để tối ưu chi phí Token.
+13
+Ghi nhận nhật ký sử dụng hệ thống (Audit log)
+Dữ liệu đầu ra
+Hệ thống tự động ghi nhận ngầm mọi thao tác (Tải file, đăng nhập, xóa dữ liệu).
+Bảng 1: Chức năng quản trị hệ thống & tài khảon
+1.2. Nhóm chức năng Quản lý Kho tri thức (RAG - Vector DB)
+STT
+Yêu cầu chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+14
+Quản lý danh mục Loại quy định (Nghị định, Thông tư, Nội quy trường)
+Dữ liệu đầu vào
+Chỉ Quản trị viên (Admin). Phân loại các nhóm luật để dễ quản lý.
+15
+Tải lên tệp tài liệu quy định chuẩn (Hỗ trợ định dạng .pdf, .docx)
+Chỉ Admin. Cung cấp dữ liệu văn bản gốc làm cơ sở pháp lý cho AI đối chiếu.
+16
+Cập nhật, chỉnh sửa tệp tài liệu quy định đã tải lên
+Chỉ Admin. Thực hiện khi có sự thay đổi nhỏ về file quy định.
+17
+Quản lý hệ thống Prompts (Mẫu câu lệnh điều khiển AI)
+Chỉ Admin. Tinh chỉnh các câu prompt ẩn để điều hướng cách AI phân tích và trả về định dạng lỗi.
+18
+Tự động bóc tách nội dung (Text Extraction) từ tệp tài liệu quy định
+Yêu cầu xử lý
+Hệ thống xử lý ngầm (AI Service) ngay khi Admin tải file lên.
+19
+Phân mảnh tài liệu (Text Chunking) theo cấu trúc (Chương, Điều, Khoản)
+Hệ thống xử lý ngầm. Chia nhỏ văn bản để AI dễ dàng trích xuất ngữ cảnh.
+20
+Nhúng dữ liệu (Embedding) tài liệu vào Vector Database
+Hệ thống xử lý ngầm. Chuyển đổi văn bản thành Vector đa chiều lưu vào ChromaDB/Milvus.
+21
+Đồng bộ và cập nhật chỉ mục (Index) của Vector Database
+Hệ thống tự động thực hiện. Đảm bảo tốc độ và độ chính xác khi truy xuất.
+22
+Vô hiệu hóa hoặc xóa các tệp tài liệu quy định cũ 
+Chỉ Admin. Cực kỳ quan trọng để ngăn chặn AI sử dụng các quy chuẩn đã hết hiệu lực.
+Bảng 2: Chức năng quản lý kho tri thức (RAG -Vector DB)
+1.3. Nhóm chức năng Xử lý và Kiểm tra văn bản (AI Document Processing)
+STT
+Yêu cầu chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+23
+Giao diện tải tệp văn bản cần kiểm tra (Kéo thả, chọn tệp .docx, .pdf)
+Yêu cầu hiển thị
+Chỉ Người dùng. Giao diện thân thiện, dễ sử dụng.
+24
+Xác thực định dạng, dung lượng và cảnh báo tệp đầu vào không hợp lệ
+Yêu cầu xử lý
+Hệ thống kiểm tra trước khi cho phép tải lên để tránh lỗi.
+25
+Bóc tách cấu trúc tệp văn bản (Heading, Paragraph, Table, Font)
+Hệ thống xử lý ngầm (AI Service) để đọc hiểu file.
+26
+Trích xuất siêu dữ liệu (Metadata) của tệp (Tác giả, ngày tạo, số trang)
+Yêu cầu truy vấn
+Hệ thống tự động thu thập thông tin file tải lên.
+27
+Truy xuất quy định chuẩn từ Vector DB dựa trên ngữ cảnh file đang xét
+Quá trình RAG cốt lõi: Tìm luật liên quan đến văn bản.
+28
+Trích xuất và đối chiếu quy định chuẩn (văn bản gốc) cho từng lỗi vi phạm
+Chỉ Người dùng. Kèm theo trích dẫn luật để chứng minh AI báo lỗi đúng.
+29
+Hiển thị tiến trình xử lý và kiểm tra của AI (Progress bar thời gian thực)
+Yêu cầu hiển thị
+Cập nhật giao diện để Người dùng biết hệ thống đang chạy.
+30
+Nhận diện lỗi thiết lập trang (Page setup: sai lề trái/phải, trên/dưới)
+Dữ liệu đầu ra
+Kết quả trả về từ AI.
+31
+Nhận diện lỗi định dạng văn bản (Font chữ, Cỡ chữ, In đậm, In nghiêng)
+Kết quả trả về từ AI.
+32
+Nhận diện lỗi đoạn văn (Dãn dòng, thụt đầu dòng, khoảng cách trước/sau)
+Kết quả trả về từ AI.
+33
+Nhận diện thiếu sót cấu trúc bắt buộc (Thiếu mục lục, danh mục tài liệu)
+Kết quả trả về từ AI.
+34
+Gửi yêu cầu phân tích và kiểm tra thể thức đến LLM
+Yêu cầu xử lý
+Chức năng gọi API để AI bắt đầu dò lỗi.
+Bảng  3:Chức năng Xử lý và Kiểm tra văn bản (AI Document Processing)
+1.4. Nhóm chức năng Báo cáo lỗi và Chuẩn hóa (Reporting & Auto-formatting)
+STT
+Yêu cầu chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+35
+Hiển thị danh sách tổng hợp các lỗi thể thức trên giao diện Web
+Yêu cầu hiển thị
+Chỉ Người dùng. Màn hình chính sau khi kiểm tra xong.
+36
+Đánh dấu (Highlight) vị trí lỗi trực quan trên bản xem trước (Document Preview)
+Chỉ Người dùng. Dễ dàng đối chiếu lỗi với văn bản gốc.
+37
+Lưu trữ lịch sử các lần kiểm tra văn bản của người dùng
+Dữ liệu đầu vào
+Hệ thống tự động lưu vào Database.
+38
+Cung cấp gợi ý sửa đổi (Recommendation) của AI cho từng lỗi cụ thể
+Yêu cầu truy vấn
+Dựa trên kết quả RAG để hướng dẫn người dùng cách sửa.
+39
+Xem lại chi tiết kết quả kiểm tra cũ (Báo cáo lỗi của các file trước đó)
+Chỉ Người dùng. Quản lý các file bản thảo đã làm.
+40
+Tải về tệp văn bản đã được AI tự động chuẩn hóa định dạng (.docx)
+Dữ liệu đầu ra
+Chỉ Người dùng. Lấy thành phẩm cuối cùng.
+41
+Xuất Báo cáo lỗi chi tiết dưới dạng tệp văn bản (.pdf, .docx)
+Chỉ Người dùng. Dùng để lưu trữ hoặc nộp cho cấp trên.
+42
+Thực thi tự động chuẩn hóa (Auto-format) sửa các lvỗi cơ bản vào file gốc
+Yêu cầu xử lý
+Chỉ Người dùng. Tính năng "1-click" sửa lỗi nhanh.
+43
+Xóa bản ghi lịch sử kiểm tra cá nhân
+Chỉ Người dùng. Dọn dẹp các bản nháp không cần thiết.
+Bảng  4:Chức năng Báo cáo lỗi và Chuẩn hóa (Reporting & Auto-formatting)
+1.5. Nhóm chức năng Thống kê & Dashboard (Admin)
+STT
+Yêu cầu chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+44
+Dashboard theo dõi tổng quan hệ thống (Số lượt tải file, số lỗi phát hiện)
+Yêu cầu hiển thị
+Chỉ Quản trị viên (Admin). Xem nhanh tình hình hoạt động của toàn trường.
+45
+Báo cáo thống kê Top các lỗi thể thức phổ biến nhất
+Dữ liệu đầu ra
+Chỉ Admin. Giúp nhà trường có cơ sở để mở các buổi tập huấn nghiệp vụ văn thư.
+46
+Báo cáo tần suất sử dụng hệ thống theo thời gian (Ngày/Tuần/Tháng)
+Chỉ Admin. Đánh giá hiệu suất hệ thống và mức độ ứng dụng AI của giáo viên
+Bảng  5:Chức năng Thống kê & Dashboard (Admin)
+1.6. Nhóm chức năng Kiểm duyệt và Phê duyệt văn bản (Reviewer)
+STT
+Yêu cầu chức năng
+Phân loại
+Ghi chú (Đối tượng / Chi tiết nghiệp vụ)
+47
+Xem danh sách các văn bản đang chờ phê duyệt
+Yêu cầu truy vấn
+Chỉ Kiểm duyệt viên (Ban giám hiệu/Tổ trưởng).
+48
+Xem kết quả phân tích lỗi từ AI và đối chiếu quy định thực tế
+Yêu cầu hiển thị
+Chỉ Kiểm duyệt viên. Đánh giá xem AI bắt lỗi có chính xác hay không.
+49
+Xác nhận lỗi (đúng/sai) và chỉnh sửa, bổ sung lỗi thủ công
+Yêu cầu xử lý
+Chỉ Kiểm duyệt viên. Can thiệp nghiệp vụ con người vào kết quả của máy
+50
+Phê duyệt văn bản đạt chuẩn và cho phép ban hành
+Chỉ Kiểm duyệt viên. Đổi trạng thái văn bản thành "Đã duyệt".
+51
+Từ chối và phản hồi yêu cầu người dùng chỉnh sửa lại
+Chỉ Kiểm duyệt viên. Trả văn bản về kèm theo nhận xét để Giáo viên/Văn thư làm lại.
+Bảng  6:Chức năng Kiểm duyệt và Phê duyệt văn bản (Reviewer)

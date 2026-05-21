@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "ecc.install.v1",
+  "installedAt": "2026-04-21T03:31:31.298Z",
+  "target": {
+    "id": "gemini-project",
+    "target": "gemini",
+    "kind": "project",
+    "root": "D:\\6rd_semester\\QLDA\\.gemini",
+    "installStatePath": "D:\\6rd_semester\\QLDA\\.gemini\\ecc-install-state.json"
+  },
+  "request": {
+    "profile": "full",
+    "modules": [],
+    "includeComponents": [],
+    "excludeComponents": [],
+    "legacyLanguages": [],
+    "legacyMode": false
+  },
+  "resolution": {
+    "selectedModules": [
+      "platform-configs"
+    ],
+    "skippedModules": [
+      "rules-core",
+      "agents-core",
+      "commands-core",
+      "hooks-runtime",
+      "framework-language",
+      "database",
+      "workflow-quality",
+      "security",
+      "research-apis",
+      "business-content",
+      "operator-workflows",
+      "social-distribution",
+      "media-generation",
+      "orchestration",
+      "swift-apple",
+      "agentic-patterns",
+      "devops-infra",
+      "supply-chain-domain",
+      "document-processing"
+    ]
+  },
+  "source": {
+    "repoVersion": "1.10.0",
+    "repoCommit": "8bdf88e5ad8877bcd00a4aba7ccbfb50f235f10f",
+    "manifestVersion": 1
+  },
+  "operations": [
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "D:\\6rd_semester\\QLDA_openClaud\\everything-claude-code\\.gemini\\GEMINI.md",
+      "sourceRelativePath": ".gemini\\GEMINI.md",
+      "destinationPath": "D:\\6rd_semester\\QLDA\\.gemini\\GEMINI.md",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "D:\\6rd_semester\\QLDA_openClaud\\everything-claude-code\\.gemini\\mcp-configs\\mcp-servers.json",
+      "sourceRelativePath": ".gemini\\mcp-configs\\mcp-servers.json",
+      "destinationPath": "D:\\6rd_semester\\QLDA\\.gemini\\mcp-configs\\mcp-servers.json",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "D:\\6rd_semester\\QLDA_openClaud\\everything-claude-code\\.gemini\\scripts\\setup-package-manager.js",
+      "sourceRelativePath": ".gemini\\scripts\\setup-package-manager.js",
+      "destinationPath": "D:\\6rd_semester\\QLDA\\.gemini\\scripts\\setup-package-manager.js",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "D:\\6rd_semester\\QLDA_openClaud\\everything-claude-code\\mcp-configs\\mcp-servers.json",
+      "sourceRelativePath": "mcp-configs\\mcp-servers.json",
+      "destinationPath": "D:\\6rd_semester\\QLDA\\.gemini\\mcp-configs\\mcp-servers.json",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "D:\\6rd_semester\\QLDA_openClaud\\everything-claude-code\\scripts\\setup-package-manager.js",
+      "sourceRelativePath": "scripts/setup-package-manager.js",
+      "destinationPath": "D:\\6rd_semester\\QLDA\\.gemini\\scripts\\setup-package-manager.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    }
+  ]
+}

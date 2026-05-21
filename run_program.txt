@@ -1,0 +1,16 @@
+# 1. Đi vào thư mục backend
+cd backend
+
+# 2. Kích hoạt môi trường ảo ảo (Virtual Environment)
+.\.venv\Scripts\Activate.ps1
+
+# 3. Chạy server FastAPI
+uvicorn main:app --reload --port 8000
+
+
+
+# 1. Đi vào thư mục frontend
+cd frontend
+
+# 2. Chạy server giao diện
+npm run dev
