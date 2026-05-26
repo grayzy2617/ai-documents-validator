@@ -24,3 +24,11 @@ build/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local Uploads & Vector DB
+backend/deadline_uploads/
+backend/user_uploads/
+backend/chroma_db*/
+backend/chroma_db/
+chroma_db/
+

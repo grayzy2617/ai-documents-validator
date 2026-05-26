@@ -322,12 +322,24 @@ def get_deadline_detail(
     replies_out = []
     for r in sorted(dl.replies, key=lambda x: x.created_at or datetime.min):
         author = r.author
+        
+        # Check if there is a UserDocument associated with this reply
+        user_doc = db.query(models.UserDocument).filter(models.UserDocument.deadline_reply_id == r.id).first()
+        user_doc_info = None
+        if user_doc:
+            user_doc_info = {
+                "id": user_doc.id,
+                "status": user_doc.status,
+                "ai_score": user_doc.ai_score
+            }
+            
         replies_out.append(
             {
                 "id": r.id,
                 "note": r.note,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
                 "author_name": author.full_name if author else "",
+                "user_document": user_doc_info,
                 "attachments": [
                     {"id": a.id, "original_file_name": a.original_file_name, "file_size": a.file_size}
                     for a in r.attachments
@@ -381,12 +393,47 @@ async def reply_deadline(
     if not (note and str(note).strip()) and not has_file:
         raise HTTPException(status_code=400, detail="Vui lòng nhập ghi chú hoặc đính kèm ít nhất một file")
 
+    # Lọc ra các file văn bản có thể gửi duyệt (.pdf, .docx)
+    doc_files = [f for f in files if f.filename and os.path.splitext(f.filename)[1].lower() in ALLOWED_EXT]
+
+    # Ghi dữ liệu phản hồi
     rep = models.DeadlineReply(deadline_id=dl.id, author_id=current_user.id, note=note or None)
     db.add(rep)
     db.flush()
 
+    saved_attachments = []
     if files:
-        _save_uploaded_files(dl.id, f"d{dl.id}_r{rep.id}", files, current_user.id, db, reply_id=rep.id)
+        saved_attachments = _save_uploaded_files(dl.id, f"d{dl.id}_r{rep.id}", files, current_user.id, db, reply_id=rep.id)
+
+    # Đồng bộ sang UserDocument nếu có file đính kèm
+    if saved_attachments and doc_files:
+        main_att = saved_attachments[0]
+        user_uploads_dir = os.path.join(os.path.dirname(__file__), "..", "user_uploads")
+        os.makedirs(user_uploads_dir, exist_ok=True)
+        
+        doc_filename = f"{current_user.id}_{main_att.original_file_name}"
+        doc_file_path = os.path.join(user_uploads_dir, doc_filename)
+        shutil.copy(main_att.file_path, doc_file_path)
+        
+        new_doc = models.UserDocument(
+            user_id=current_user.id,
+            original_file_name=main_att.original_file_name,
+            file_path=doc_file_path,
+            status="PENDING",  # Chờ BGH duyệt
+            ai_score=None,     # Bỏ qua chấm điểm AI tự động lúc nộp bài
+            deadline_id=dl.id,
+            deadline_reply_id=rep.id,
+            metadata_info={"file_size_bytes": main_att.file_size}
+        )
+        db.add(new_doc)
+        db.flush()
+        
+        # Tạo bản ghi CheckHistory rỗng để BGH có thể thêm lỗi thủ công nếu cần
+        new_history = models.CheckHistory(
+            document_id=new_doc.id
+        )
+        db.add(new_history)
+        db.flush()
 
     db.commit()
 

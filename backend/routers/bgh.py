@@ -302,3 +302,44 @@ def get_audit_logs(
         })
         
     return result
+
+class MinScoreConfigRequest(BaseModel):
+    min_score: int
+
+@router.get("/config/min-score")
+def get_min_score_config(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    check_bgh(current_user)
+    config = db.query(models.SystemConfig).filter(models.SystemConfig.config_key == "min_ai_score").first()
+    if not config:
+        return {"min_score": 80}
+    val = config.config_value
+    if isinstance(val, dict) and "min_score" in val:
+        return {"min_score": val["min_score"]}
+    try:
+        return {"min_score": int(val)}
+    except Exception:
+        return {"min_score": 80}
+
+@router.post("/config/min-score")
+def update_min_score_config(
+    request: MinScoreConfigRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    check_bgh(current_user)
+    if request.min_score < 0 or request.min_score > 100:
+        raise HTTPException(status_code=400, detail="Ngưỡng điểm phải nằm trong khoảng từ 0 đến 100")
+        
+    config = db.query(models.SystemConfig).filter(models.SystemConfig.config_key == "min_ai_score").first()
+    if not config:
+        config = models.SystemConfig(
+            config_key="min_ai_score",
+            config_value=request.min_score,
+            description="Ngưỡng điểm AI tối thiểu cho phép nộp văn bản"
+        )
+        db.add(config)
+    else:
+        config.config_value = request.min_score
+        
+    db.commit()
+    return {"message": "Đã cập nhật ngưỡng điểm AI tối thiểu", "min_score": request.min_score}

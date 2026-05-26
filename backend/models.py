@@ -53,11 +53,15 @@ class UserDocument(Base):
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     approved_at = Column(TIMESTAMP, nullable=True)
     metadata_info = Column(JSON, nullable=True) # Lưu json metadata (tác giả, số trang...)
+    deadline_id = Column(Integer, ForeignKey("deadlines.id"), nullable=True)
+    deadline_reply_id = Column(Integer, ForeignKey("deadline_replies.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     owner = relationship("User", back_populates="documents", foreign_keys=[user_id])
     check_histories = relationship("CheckHistory", back_populates="document")
     reviews = relationship("DocumentReview", back_populates="document")
+    deadline = relationship("Deadline", foreign_keys=[deadline_id])
+    deadline_reply = relationship("DeadlineReply", foreign_keys=[deadline_reply_id])
 
 class CheckHistory(Base):
     __tablename__ = "check_history"

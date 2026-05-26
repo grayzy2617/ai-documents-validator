@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Button from '../components/Button';
 import api from '../services/api';
@@ -9,12 +9,14 @@ const MAX_FILES = 3;
 function Deadlines() {
     const { user } = useContext(AuthContext);
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const isManager = user?.role === 'BGH' || user?.role === 'TO_TRUONG';
     const isBgh = user?.role === 'BGH';
 
     const [deadlines, setDeadlines] = useState([]);
     const [upcoming, setUpcoming] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [aiError, setAiError] = useState(null);
 
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -158,6 +160,7 @@ function Deadlines() {
         e.preventDefault();
         if (!detail) return;
         setReplySubmitting(true);
+        setAiError(null);
         try {
             const fd = new FormData();
             if (replyNote.trim()) fd.append('note', replyNote.trim());
@@ -172,7 +175,11 @@ function Deadlines() {
             fetchDeadlines();
         } catch (err) {
             const d = err.response?.data?.detail;
-            alert('Lỗi phản hồi: ' + (typeof d === 'string' ? d : JSON.stringify(d) || err.message));
+            if (err.response?.status === 400 && d && typeof d === 'object' && d.errors) {
+                setAiError(d);
+            } else {
+                alert('Lỗi phản hồi: ' + (typeof d === 'string' ? d : JSON.stringify(d) || err.message));
+            }
         } finally {
             setReplySubmitting(false);
         }
@@ -599,6 +606,56 @@ function Deadlines() {
                                                 </li>
                                             ))}
                                         </ul>
+                                        {r.user_document && (
+                                            <div style={{ marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                <span style={{
+                                                    padding: '3px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.85em',
+                                                    fontWeight: 'bold',
+                                                    border: '1px solid',
+                                                    backgroundColor: 
+                                                        r.user_document.status === 'BGH_APPROVED' ? '#d4edda' :
+                                                        r.user_document.status === 'REJECTED' ? '#f8d7da' :
+                                                        r.user_document.status === 'NEEDS_REVISION' ? '#fff3cd' : '#e2f0fe',
+                                                    color: 
+                                                        r.user_document.status === 'BGH_APPROVED' ? '#155724' :
+                                                        r.user_document.status === 'REJECTED' ? '#721c24' :
+                                                        r.user_document.status === 'NEEDS_REVISION' ? '#856404' : '#004085',
+                                                    borderColor: 
+                                                        r.user_document.status === 'BGH_APPROVED' ? '#c3e6cb' :
+                                                        r.user_document.status === 'REJECTED' ? '#f5c6cb' :
+                                                        r.user_document.status === 'NEEDS_REVISION' ? '#ffeeba' : '#b8daff',
+                                                }}>
+                                                    {r.user_document.status === 'BGH_APPROVED' ? '✓ Đã phê duyệt & Đạt chuẩn' :
+                                                     r.user_document.status === 'REJECTED' ? '✗ Bị từ chối' :
+                                                     r.user_document.status === 'NEEDS_REVISION' ? '⚠ Yêu cầu sửa lại' : '⏱ Chờ duyệt thể thức'}
+                                                </span>
+                                                {isManager && r.user_document.status === 'PENDING' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            releasePdfUrl();
+                                                            setPreview(null);
+                                                            setDetail(null);
+                                                            navigate(`/reviewer/document/${r.user_document.id}`);
+                                                        }}
+                                                        style={{
+                                                            padding: '4px 10px',
+                                                            background: '#0056b3',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.8em',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        Đến duyệt →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 {(detail.replies || []).length === 0 && (
@@ -674,6 +731,64 @@ function Deadlines() {
                                 dangerouslySetInnerHTML={{ __html: preview.html }}
                             />
                         )}
+                    </div>
+                </div>
+            )}
+
+            {aiError && (
+                <div className="deadline-modal-overlay" onClick={() => setAiError(null)}>
+                    <div
+                        style={{
+                            background: '#fff',
+                            maxWidth: '600px',
+                            width: '100%',
+                            maxHeight: '85vh',
+                            overflow: 'auto',
+                            padding: '24px',
+                            borderRadius: '10px',
+                            color: '#333',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, color: '#dc3545' }}>⚠️ Văn bản không đạt chuẩn thể thức</h3>
+                            <button
+                                type="button"
+                                onClick={() => setAiError(null)}
+                                style={{ border: 'none', background: '#eee', borderRadius: '4px', padding: '5px 10px', cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                        
+                        <div style={{ padding: '15px', background: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '6px', color: '#721c24', marginBottom: '15px' }}>
+                            <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1em' }}>
+                                Điểm AI đạt được: <span style={{ fontSize: '1.3em' }}>{aiError.ai_score}</span> / {aiError.min_score} điểm
+                            </p>
+                            <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>
+                                Ngưỡng tối thiểu của nhà trường yêu cầu để nộp bài là {aiError.min_score} điểm.
+                            </p>
+                        </div>
+
+                        <p style={{ fontWeight: 'bold' }}>Chi tiết các lỗi cần khắc phục ({aiError.errors?.length || 0} lỗi):</p>
+                        <ul style={{ paddingLeft: '20px', color: '#555', fontSize: '0.95em' }}>
+                            {(aiError.errors || []).map((err, index) => (
+                                <li key={index} style={{ marginBottom: '10px' }}>
+                                    <strong style={{ color: '#c82333' }}>{err.error_type}</strong> ({err.error_location || 'Không rõ vị trí'}): 
+                                    <div style={{ marginTop: '2px', color: '#333' }}>{err.description}</div>
+                                    {err.suggestion && (
+                                        <div style={{ marginTop: '2px', fontStyle: 'italic', color: '#28a745' }}>
+                                            👉 Gợi ý sửa: {err.suggestion}
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div style={{ marginTop: '20px', padding: '12px', background: '#e2f0fe', border: '1px solid #b8daff', borderRadius: '6px', color: '#004085', fontSize: '0.9em', lineHeight: '1.4' }}>
+                            💡 <strong>Hướng dẫn:</strong> Bạn hãy truy cập vào mục <strong>[Kiểm tra văn bản]</strong> ở menu bên trái, tải file này lên để AI chấm điểm trực quan và sử dụng bộ chỉnh sửa AI (Auto-Fix/WYSIWYG) để sửa sạch lỗi. Sau đó, tải tệp đã sửa xuống và nộp lại tại đây nhé!
+                        </div>
                     </div>
                 </div>
             )}

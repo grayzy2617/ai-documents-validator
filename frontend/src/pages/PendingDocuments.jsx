@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Button from '../components/Button';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function PendingDocuments() {
   const { user } = useContext(AuthContext);
@@ -21,10 +19,7 @@ function PendingDocuments() {
 
   const fetchPending = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_URL}/reviewer/pending`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/reviewer/pending');
       setDocuments(res.data.items || []);
     } catch (err) {
       console.error(err);
@@ -41,11 +36,7 @@ function PendingDocuments() {
     if (selectedDocs.length === 0) return alert('Chưa chọn văn bản nào');
     if (!window.confirm(`Phê duyệt ${selectedDocs.length} văn bản?`)) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/bgh/batch-approve`, 
-        { document_ids: selectedDocs },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      await api.post('/bgh/batch-approve', { document_ids: selectedDocs });
       alert('Đã phê duyệt thành công');
       setSelectedDocs([]);
       fetchPending();
@@ -57,10 +48,9 @@ function PendingDocuments() {
   const handleMergeReports = async () => {
     if (selectedDocs.length === 0) return alert('Chưa chọn văn bản nào');
     try {
-        const token = localStorage.getItem('token');
-        const res = await axios.post(`${API_URL}/report/merge`, 
+        const res = await api.post('/report/merge', 
             { history_ids: selectedDocs },
-            { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
+            { responseType: 'blob' }
         );
         const url = window.URL.createObjectURL(new Blob([res.data]));
         const link = document.createElement('a');
@@ -74,26 +64,17 @@ function PendingDocuments() {
     }
   };
 
-  const getScoreBadge = (score) => {
-      if (score >= 90) return { bg: '#d4edda', color: '#155724', text: `Tốt (${score}đ)` };
-      if (score >= 70) return { bg: '#fff3cd', color: '#856404', text: `Khá (${score}đ)` };
-      return { bg: '#f8d7da', color: '#721c24', text: `Kém (${score}đ)` };
-  };
-
   return (
     <div style={{ padding: '20px' }}>
       <h2 style={{ marginBottom: '20px' }}>Văn Bản Chờ Duyệt</h2>
-      
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-          {isBGH && (
-              <Button variant="primary" onClick={handleBatchApprove}>
-                  Phê duyệt Hàng loạt ({selectedDocs.length})
-              </Button>
-          )}
-          <Button variant="outline" onClick={handleMergeReports}>
-              Gộp Báo Cáo ({selectedDocs.length})
+
+      {isBGH && (
+        <div style={{ marginBottom: '20px' }}>
+          <Button onClick={handleBatchApprove} variant="primary">
+            Phê duyệt Hàng loạt ({selectedDocs.length})
           </Button>
-      </div>
+        </div>
+      )}
 
       {loading ? (
         <p>Đang tải...</p>
@@ -111,14 +92,13 @@ function PendingDocuments() {
                 <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>ID</th>
                 <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Tên File</th>
                 <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Người Tải Lên</th>
-                <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Điểm AI (Cấu trúc)</th>
+                <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Nguồn / Deadline</th>
                 <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Thời Gian</th>
                 <th style={{ padding: '12px', borderBottom: '2px solid #ddd' }}>Hành Động</th>
               </tr>
             </thead>
             <tbody>
               {documents.length > 0 ? documents.map(doc => {
-                const badge = getScoreBadge(doc.ai_score || Math.floor(Math.random() * 40) + 60); // Mock if null
                 return (
                 <tr key={doc.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '12px' }}>
@@ -128,9 +108,22 @@ function PendingDocuments() {
                   <td style={{ padding: '12px' }}><strong>{doc.original_file_name}</strong></td>
                   <td style={{ padding: '12px' }}>{doc.uploader || doc.owner}</td>
                   <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '4px 8px', borderRadius: '12px', background: badge.bg, color: badge.color, fontWeight: 'bold', fontSize: '0.9em' }}>
-                          {badge.text}
+                    {doc.deadline_title ? (
+                      <span style={{ 
+                        background: '#e2f0fe', 
+                        color: '#0056b3', 
+                        padding: '3px 8px', 
+                        borderRadius: '4px', 
+                        fontSize: '0.85em', 
+                        fontWeight: '600',
+                        border: '1px solid #b8daff',
+                        display: 'inline-block'
+                      }}>
+                        📅 {doc.deadline_title}
                       </span>
+                    ) : (
+                      <span style={{ color: '#777', fontSize: '0.85em' }}>Tự kiểm tra (ad-hoc)</span>
+                    )}
                   </td>
                   <td style={{ padding: '12px' }}>{new Date(doc.created_at).toLocaleString('vi-VN')}</td>
                   <td style={{ padding: '12px' }}>

@@ -21,9 +21,10 @@ class DocumentReviewAction(BaseModel):
     comments: Optional[str] = None
 
 def check_reviewer_role(current_user: models.User):
-    # Kiểm tra xem user có role REVIEWER hoặc ADMIN không
+    # Kiểm tra xem user có role BGH, TO_TRUONG, REVIEWER hoặc ADMIN không
     roles = [role.role_name for role in current_user.roles]
-    if "REVIEWER" not in roles and "ADMIN" not in roles:
+    allowed_roles = {"BGH", "TO_TRUONG", "REVIEWER", "ADMIN"}
+    if not any(r in allowed_roles for r in roles):
         raise HTTPException(status_code=403, detail="Không có quyền kiểm duyệt")
 
 @router.get("/pending")
@@ -46,11 +47,12 @@ def get_pending_documents(
         models.UserDocument.status == "PENDING"
     ).count()
 
-    # Map để lấy cả user upload
     items = []
     for doc in docs:
         d = doc.__dict__.copy()
+        d.pop('ai_score', None) # Bỏ điểm AI dưới hệ thống cho reviewer
         d['uploader'] = doc.owner.full_name if doc.owner else "Unknown"
+        d['deadline_title'] = doc.deadline.title if doc.deadline else None
         items.append(d)
 
     return {
@@ -84,7 +86,9 @@ def get_reviewed_documents(
     items = []
     for doc in docs:
         d = doc.__dict__.copy()
+        d.pop('ai_score', None) # Bỏ điểm AI dưới hệ thống cho reviewer
         d['uploader'] = doc.owner.full_name if doc.owner else "Unknown"
+        d['deadline_title'] = doc.deadline.title if doc.deadline else None
         items.append(d)
 
     return {

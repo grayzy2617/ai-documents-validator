@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function ReviewDocument() {
   const { id } = useParams();
@@ -26,10 +24,7 @@ function ReviewDocument() {
 
   const fetchReviewData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_URL}/reviewer/documents/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/reviewer/documents/${id}`);
       setData(res.data);
     } catch (err) {
       console.error(err);
@@ -41,11 +36,7 @@ function ReviewDocument() {
 
   const handleUpdateError = async (errorId, status) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/reviewer/errors/${errorId}`, 
-        { status }, 
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      await api.put(`/reviewer/errors/${errorId}`, { status });
       
       // Update local state
       setData(prev => {
@@ -61,11 +52,7 @@ function ReviewDocument() {
   const handleAddManualError = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(`${API_URL}/reviewer/documents/${id}/errors`, 
-        newError, 
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      const res = await api.post(`/reviewer/documents/${id}/errors`, newError);
       
       // Cập nhật giao diện với lỗi mới vừa thêm
       setData(prev => ({
@@ -85,10 +72,8 @@ function ReviewDocument() {
 
   const handleFinalReview = async (statusAction) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/reviewer/documents/${id}/review`, 
-        { review_status: statusAction, comments: reviewComments }, 
-        { headers: { Authorization: `Bearer ${token}` }}
+      await api.post(`/reviewer/documents/${id}/review`, 
+        { review_status: statusAction, comments: reviewComments }
       );
       alert('Kiểm duyệt thành công');
       navigate('/reviewer/pending');

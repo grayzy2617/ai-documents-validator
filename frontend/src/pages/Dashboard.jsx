@@ -16,14 +16,33 @@ const Dashboard = () => {
     const isBGH = user?.role === 'BGH';
 
     const [ops, setOps] = useState(null);
+    const [minAiScore, setMinAiScore] = useState(80);
+    const [configSaving, setConfigSaving] = useState(false);
 
     useEffect(() => {
         if (isBGH) {
             api.get('/bgh/dashboard/stats')
                 .then((res) => setOps(res.data))
                 .catch((err) => console.error('Lỗi lấy dữ liệu BGH:', err));
+
+            api.get('/bgh/config/min-score')
+                .then((res) => setMinAiScore(res.data.min_score))
+                .catch((err) => console.error('Lỗi lấy cấu hình điểm AI:', err));
         }
     }, [isBGH]);
+
+    const handleSaveConfig = async (e) => {
+        e.preventDefault();
+        setConfigSaving(true);
+        try {
+            await api.post('/bgh/config/min-score', { min_score: minAiScore });
+            alert('Đã lưu cấu hình ngưỡng điểm AI tối thiểu là ' + minAiScore);
+        } catch (err) {
+            alert('Lỗi lưu cấu hình: ' + (err.response?.data?.detail || err.message));
+        } finally {
+            setConfigSaving(false);
+        }
+    };
 
     return (
         <div style={{ padding: '20px' }}>
@@ -72,6 +91,52 @@ const Dashboard = () => {
                                 <p style={{ fontSize: '28px', fontWeight: 'bold', margin: '8px 0 0', color: card.color }}>{card.value}</p>
                             </div>
                         ))}
+                    </div>
+
+                    <div style={{ 
+                        marginTop: '20px', 
+                        padding: '20px', 
+                        background: '#f8f9fa', 
+                        border: '1px solid #ddd', 
+                        borderRadius: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '15px'
+                    }}>
+                        <div>
+                            <h3 style={{ margin: 0, color: '#333' }}>⚙️ Cài đặt Ngưỡng điểm AI phê duyệt</h3>
+                            <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>
+                                Ngưỡng điểm tối thiểu AI RAG yêu cầu để văn bản Giáo viên nộp đạt tiêu chuẩn.
+                            </p>
+                        </div>
+                        <form onSubmit={handleSaveConfig} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input 
+                                type="number" 
+                                min="0" 
+                                max="100" 
+                                style={{ width: '80px', padding: '8px', fontSize: '16px', textAlign: 'center', border: '1px solid #ccc', borderRadius: '4px', color: 'black' }}
+                                value={minAiScore}
+                                onChange={(e) => setMinAiScore(parseInt(e.target.value, 10) || 0)}
+                            />
+                            <button 
+                                type="submit" 
+                                disabled={configSaving}
+                                style={{ 
+                                    background: '#0056b3', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    padding: '8px 16px', 
+                                    borderRadius: '4px', 
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {configSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                            </button>
+                        </form>
                     </div>
 
                     <div style={{ display: 'flex', gap: '20px', marginTop: '30px', flexWrap: 'wrap' }}>
